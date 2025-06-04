@@ -54,4 +54,4 @@ apps/*/config/*.js
 !apps/*/config/_default.js
 .patreon-credentials.json
 install.config
-
+yarn.lock
