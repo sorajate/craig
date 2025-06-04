@@ -273,7 +273,7 @@ export const postTranscriptRoute: RouteOptions = {
     }
 
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-preview-05-20" });
 
     let tempAudioFilePath: string | null = null;
     try {
@@ -286,8 +286,8 @@ export const postTranscriptRoute: RouteOptions = {
 
       // 2. Call Google Gemini API
       console.log(`[Gemini API] Uploading audio file: ${tempAudioFilePath} for recording ${id}`);
-      const uploadedFileResponse = await genAI.uploadFile(tempAudioFilePath);
-      console.log(`[Gemini API] Audio file uploaded for ${id}. File URI: ${uploadedFileResponse.file.uri}`);
+      const uploadedFileResponse = await genAI.uploadFile(tempAudioFilePath, { mimeType: "audio/ogg" });
+      console.log(`[Gemini API] Audio file uploaded for ${id}. File URI: ${uploadedFileResponse.file.uri}, MIME Type: ${uploadedFileResponse.file.mimeType}`);
 
       const prompt = "Please transcribe the following audio recording. After the full transcript, provide a concise summary of the content. Structure your response clearly, with 'Transcript:' and 'Summary:' headings. If the audio is very short or contains no discernible speech, indicate that appropriately.";
 
