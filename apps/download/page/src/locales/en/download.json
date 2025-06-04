@@ -1,0 +1,22 @@
+{
+  "transcriptPage": {
+    "title": "Audio Transcription",
+    "loadingRecording": "Loading recording details...",
+    "startTranscription": "Start Transcription",
+    "reTranscribe": "Re-transcribe",
+    "downloadTranscript": "Download Transcript",
+    "transcriptionInProgress": "Transcription in progress, please wait...",
+    "transcriptLabel": "Transcript & Summary",
+    "error": {
+      "fetchRecordingFailed": "Failed to load recording details.",
+      "transcriptionFailedApi": "Transcription failed due to an API error. Please try again later.",
+      "transcriptionFailedNetwork": "Transcription failed due to a network issue. Please check your connection and try again.",
+      "checkExistingFailed": "Could not check for existing transcript."
+    },
+    "backToRecordings": "Back to Recording"
+  },
+  "buttons": {
+    "getTranscript": "Get Transcript"
+  },
+  "_local_name": "English (US)"
+}

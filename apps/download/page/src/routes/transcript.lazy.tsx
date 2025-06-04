@@ -29,12 +29,15 @@ export default function TranscriptPage() {
   const [error, setError] = useState<string | null>(null);
   const [transcribing, setTranscribing] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string | null>(null);
+  const [hasCheckedExisting, setHasCheckedExisting] = useState<boolean>(false); // To prevent re-checking existing
   const [recordingId, setRecordingId] = useState<string | null>(null);
   const [accessKey, setAccessKey] = useState<string | null>(null);
 
   useEffect(() => {
     const pathParts = location.pathname.split('/');
-    const recId = pathParts[pathParts.length -1]; // Assuming /transcript/[id]
+    // Assuming URL is /transcript/[id]
+    // If it's /app/transcript/[id] or similar, adjust index accordingly
+    const recId = pathParts.length > 2 ? pathParts[2] : null;
     const searchParams = new URLSearchParams(location.search);
     const accKey = searchParams.get('key');
 
@@ -43,24 +46,39 @@ export default function TranscriptPage() {
 
     if (recId && accKey) {
       setLoadingRecordingDetails(true);
+      setError(null); // Clear previous errors
       getRecording(recId, accKey)
         .then((rec) => {
           setRecording(rec);
-          setError(null);
+          // Now check for existing transcript
+          return fetch(`/api/recording/${recId}/transcript?key=${accKey}`);
+        })
+        .then(async (transcriptResponse) => {
+          if (transcriptResponse.ok) {
+            const existingTranscript = await transcriptResponse.text();
+            setTranscript(existingTranscript);
+          } else if (transcriptResponse.status === 404) {
+            setTranscript(null); // No existing transcript
+          } else {
+            // Handle other errors for fetching existing transcript
+            const errorData = await transcriptResponse.json().catch(() => null);
+            throw new Error(errorData?.error || `Error ${transcriptResponse.status} checking for existing transcript`);
+          }
         })
         .catch((err) => {
-          console.error('Failed to get recording:', err);
-          // Assuming parseError similar to app.tsx exists or can be added
+          console.error('Failed to load recording details or existing transcript:', err);
           setError(err.message || t('transcriptPage.error.loadRecordingFailed'));
         })
         .finally(() => {
           setLoadingRecordingDetails(false);
+          setHasCheckedExisting(true);
         });
     } else {
       setError(t('transcriptPage.error.missingParams'));
       setLoadingRecordingDetails(false);
+      setHasCheckedExisting(true);
     }
-  }, [t]); // t added as dependency for error messages
+  }, [t, recordingId, accessKey]); // Ensure effect runs if recId/accKey change e.g. via direct URL nav
 
   const handleStartTranscription = useCallback(async () => {
     if (!recordingId || !accessKey) {
@@ -72,22 +90,25 @@ export default function TranscriptPage() {
     setError(null);
 
     try {
-      // Placeholder for API call
-      // const response = await fetch(`/api/recording/${recordingId}/transcript?key=${accessKey}`, { method: 'POST' });
-      // if (!response.ok) {
-      //   const errorData = await response.json();
-      //   throw new Error(errorData.message || `Error ${response.status}`);
-      // }
-      // const transcriptData = await response.text(); // Or response.json().transcript if it's structured
+      const response = await fetch(`/api/recording/${recordingId}/transcript?key=${accessKey}`, {
+        method: 'POST',
+        headers: {
+          // Potentially add other headers if needed by your API, e.g., 'Content-Type': 'application/json'
+          // For a POST that triggers an action and returns text, this might be sufficient.
+        }
+      });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const mockTranscript = `This is a mock transcript for recording ${recordingId}. It was generated at ${new Date().toLocaleTimeString()}.`;
-      setTranscript(mockTranscript);
-
+      if (response.ok) {
+        const newTranscript = await response.text();
+        setTranscript(newTranscript);
+      } else {
+        const errorData = await response.json().catch(() => ({ error: `HTTP error ${response.status}` }));
+        console.error('Transcription API error:', errorData);
+        setError(errorData.error || t('transcriptPage.error.transcriptionFailedApi'));
+      }
     } catch (err: any) {
-      console.error('Failed to start transcription:', err);
-      setError(err.message || t('transcriptPage.error.transcriptionFailed'));
+      console.error('Failed to start transcription (network/fetch error):', err);
+      setError(err.message || t('transcriptPage.error.transcriptionFailedNetwork'));
     } finally {
       setTranscribing(false);
     }
@@ -118,13 +139,13 @@ export default function TranscriptPage() {
             <h1 class="sm:text-4xl text-2xl text-zinc-100 font-display">
               {t('transcriptPage.title', 'Recording Transcript')}
             </h1>
-            <a href="/" class="text-zinc-400 font-medium hover:underline focus:underline outline-none">
-              &larr; {t('transcriptPage.backToDownloads', 'Back to Downloads')}
+            <a href="/dl" class="text-zinc-400 font-medium hover:underline focus:underline outline-none"> {/* Assuming /dl is the main download page listing */}
+              &larr; {t('transcriptPage.backToRecordings', 'Back to Recordings')}
             </a>
           </div>
         </div>
 
-        {loadingRecordingDetails && (
+        {(loadingRecordingDetails || (!hasCheckedExisting && !error)) && (
           <div class="flex justify-center items-center py-10">
             <Spinner />
             <span class="ml-2">{t('transcriptPage.loadingDetails', 'Loading recording details...')}</span>
@@ -135,21 +156,17 @@ export default function TranscriptPage() {
           <div class="bg-red-800 border border-red-700 text-red-100 px-4 py-3 rounded relative" role="alert">
             <strong class="font-bold">{t('transcriptPage.error.title', 'Error')}: </strong>
             <span class="block sm:inline">{error}</span>
-            <span class="absolute top-0 bottom-0 right-0 px-4 py-3" onClick={() => setError(null)}>
+            <button onClick={() => setError(null)} class="absolute top-0 bottom-0 right-0 px-4 py-3 focus:outline-none">
               <Icon icon={closeIcon} />
-            </span>
+            </button>
           </div>
         )}
 
-        {!loadingRecordingDetails && !error && recording && (
+        {!loadingRecordingDetails && hasCheckedExisting && !error && recording && (
           <div class="bg-zinc-800 shadow-md p-6 rounded-lg">
             <h2 class="text-2xl font-semibold mb-4">
               {t('transcriptPage.recording', 'Recording')}: {recording.name || recordingId}
             </h2>
-            {/* Could add more recording details here if needed */}
-            {/* <p>{t('transcriptPage.id', 'ID')}: {recordingId}</p> */}
-            {/* <p>{t('transcriptPage.requester', 'Requested by')}: {recording.requester}</p> */}
-
 
             {transcript ? (
               <Fragment>
@@ -157,16 +174,15 @@ export default function TranscriptPage() {
                 <pre class="bg-zinc-700 p-4 rounded-md whitespace-pre-wrap max-h-96 overflow-y-auto">
                   {transcript}
                 </pre>
-                <div class="mt-6 flex gap-4">
+                <div class="mt-6 flex flex-wrap gap-4">
                   <Button onClick={handleDownloadTranscript}>
                     {t('transcriptPage.downloadTranscript', 'Download Transcript')}
                   </Button>
-                  {/* Optional: Re-transcribe button */}
-                  {/* <Button onClick={handleStartTranscription} disabled={transcribing}>
+                  <Button onClick={handleStartTranscription} disabled={transcribing} class="bg-orange-500 hover:bg-orange-700">
                     {transcribing
                       ? <Fragment><Spinner /> {t('transcriptPage.transcribing', 'Transcribing...')}</Fragment>
                       : t('transcriptPage.reTranscribe', 'Re-transcribe')}
-                  </Button> */}
+                  </Button>
                 </div>
               </Fragment>
             ) : (
@@ -189,8 +205,8 @@ export default function TranscriptPage() {
           </div>
         )}
 
-        {!loadingRecordingDetails && !error && !recording && (
-           <p>{t('transcriptPage.noRecordingFound', 'No recording details found. Please check the URL and access key.')}</p>
+        {!loadingRecordingDetails && hasCheckedExisting && !error && !recording && (
+           <p>{t('transcriptPage.noRecordingFound', 'No recording details found. Please check the URL and access key, or ensure the recording exists.')}</p>
         )}
 
         {/* Footer (simplified) */}
