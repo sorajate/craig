@@ -4,6 +4,7 @@ import downloadIcon from '@iconify-icons/ic/baseline-download';
 import expiryIcon from '@iconify-icons/ic/outline-timer';
 import audioIcon from '@iconify-icons/ic/round-audio-file';
 import imageIcon from '@iconify-icons/ic/round-image';
+import transcriptIcon from '@iconify-icons/ic/round-notes';
 import clsx from 'clsx';
 import { Fragment, h } from 'preact';
 import { useTranslation } from 'react-i18next';
@@ -36,9 +37,10 @@ interface RecordingProps {
   onDownloadClick?(button: SectionButton, e: MouseEvent): any;
   onAvatarsClick?(payload: CookAvatarsPayload, e: MouseEvent): any;
   onDeleteClick?(e: MouseEvent): any;
+  onGetTranscriptClick?: (e: MouseEvent) => any;
 }
 
-export default function Recording({ state, onDurationClick, onDownloadClick, onDeleteClick, onAvatarsClick }: RecordingProps) {
+export default function Recording({ state, onDurationClick, onDownloadClick, onDeleteClick, onAvatarsClick, onGetTranscriptClick }: RecordingProps) {
   const { t } = useTranslation();
   const recording = state.recording;
   const startDate = new Date(recording.startTime);
@@ -131,6 +133,13 @@ export default function Recording({ state, onDurationClick, onDownloadClick, onD
 
       {/* Downloads */}
       <Section title={t('sections.dl')} icon={downloadIcon}>
+        <div class="flex flex-row flex-wrap gap-3 mb-3">
+          <DownloadButton
+            icon={transcriptIcon}
+            title={t('buttons.get_transcript')}
+            onClick={onGetTranscriptClick}
+          />
+        </div>
         {downloadsSection.map((section, i) => (
           <Section title={asT(t, section.title)} icon={section.icon} small key={i}>
             <div class="flex flex-row flex-wrap gap-3">

@@ -99,6 +99,8 @@ export async function start(): Promise<void> {
   server.route(recordingRoute.textRoute);
   server.route(recordingRoute.usersRoute);
   server.route(recordingRoute.rawRoute);
+  server.route(recordingRoute.getTranscriptRoute); // Added
+  server.route(recordingRoute.postTranscriptRoute); // Added
   server.route(cookRoute.durationRoute);
   server.route(cookRoute.notesRoute);
   server.route(cookRoute.getRoute);

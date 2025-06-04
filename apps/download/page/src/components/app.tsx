@@ -96,6 +96,7 @@ export default class App extends Component<any, AppState> {
     this.startAvatarDownload = this.startAvatarDownload.bind(this);
     this.showDeletePrompt = this.showDeletePrompt.bind(this);
     this.toggleHiddenPlatform = this.toggleHiddenPlatform.bind(this);
+    // this.handleGetTranscriptClick is an arrow function, no binding needed
 
     console.log('Loaded', {
       platform: this.state.platform,
@@ -420,6 +421,41 @@ export default class App extends Component<any, AppState> {
     this.setState({ platform: newPlatform });
   }
 
+  handleGetTranscriptClick = () => {
+    if (this.state.recording && this.state.recording.key) {
+      const recordingId = this.state.recordingId;
+      const accessKey = this.state.recording.key;
+      location.href = `/transcript/${recordingId}?key=${accessKey}`;
+    } else {
+      // Fallback to parsing from URL if state doesn't have the key
+      const query = new URLSearchParams(location.search);
+      const accessKey = query.get('key');
+      if (accessKey) {
+        const recordingId = this.state.recordingId;
+        location.href = `/transcript/${recordingId}?key=${accessKey}`;
+      } else {
+        console.error('Could not determine access key for transcript link');
+        // Optionally, show an error to the user
+        this.openModal(
+          <ModalContent
+            title={i18n.t('modal.error')}
+            buttons={[
+              <ModalButton key={1} onClick={() => this.closeModal()}>
+                {i18n.t('close')}
+              </ModalButton>
+            ]}
+          >
+            <p>{i18n.t('error.cannot_get_transcript_key')}</p>
+          </ModalContent>,
+          {
+            allowClose: true,
+            contentLabel: i18n.t('modal.error')
+          }
+        );
+      }
+    }
+  };
+
   openDownloadingModal(avatars = false, button?: SectionButton) {
     this.setState({
       modalOpen: true,
@@ -478,6 +514,7 @@ export default class App extends Component<any, AppState> {
                   onDownloadClick={this.startDownload}
                   onAvatarsClick={this.startAvatarDownload}
                   onDeleteClick={this.showDeletePrompt}
+                  onGetTranscriptClick={this.handleGetTranscriptClick}
                 />
               )}
 
